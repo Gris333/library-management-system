@@ -4,6 +4,22 @@ const { formatDateTime, addDays } = require("../utils/date");
 
 const DEFAULT_LOAN_DAYS = 30;
 
+async function syncOverdueLoansForUser(userId) {
+  const now = new Date();
+
+  await prisma.loan.updateMany({
+    where: {
+      userId,
+      status: "Borrowing",
+      returnDate: null,
+      dueDate: { lt: now },
+    },
+    data: {
+      status: "Overdue",
+    },
+  });
+}
+
 function toCurrentLoan(loan) {
   return {
     id: loan.id,
@@ -18,10 +34,12 @@ function toCurrentLoan(loan) {
 }
 
 async function getCurrentLoans(userId) {
+  await syncOverdueLoansForUser(userId);
+
   const loans = await prisma.loan.findMany({
     where: {
       userId,
-      status: "Borrowing",
+      status: { in: ["Borrowing", "Overdue"] },
     },
     include: {
       book: true,
@@ -37,6 +55,8 @@ async function getCurrentLoans(userId) {
 }
 
 async function getHistoryLoans(userId, page = 1, size = 10) {
+  await syncOverdueLoansForUser(userId);
+
   const skip = (page - 1) * size;
   
   const [loans, totalCount] = await Promise.all([
@@ -173,6 +193,8 @@ async function createLoan(userId, payload) {
 }
 
 async function renewLoan(userId, loanId) {
+  await syncOverdueLoansForUser(userId);
+
   const loan = await prisma.loan.findUnique({
     where: { id: loanId },
     include: {
@@ -188,7 +210,7 @@ async function renewLoan(userId, loanId) {
     throw new AppError(404, "借阅记录不存在或非当前用户");
   }
 
-  if (loan.status !== "Borrowing") {
+  if (!["Borrowing", "Overdue"].includes(loan.status)) {
     throw new AppError(400, "仅借阅中的图书可续借");
   }
 
