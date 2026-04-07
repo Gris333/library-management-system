@@ -1,6 +1,17 @@
 const adminUserService = require("../services/adminUserService");
 const { sendSuccess } = require("../lib/response");
 
+async function resetUserPassword(req, res, next) {
+  try {
+    const { id: targetUserId } = req.params;
+    const payload = req.body || {};
+    const data = await adminUserService.resetUserPassword(req.currentUser.id, targetUserId, payload);
+    sendSuccess(res, data, "密码重置成功");
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function createLibrarian(req, res, next) {
   try {
     // 获取操作人 ID (假设中间件会注入 req.currentUser)
@@ -32,4 +43,5 @@ async function updateLibrarian(req, res, next) {
 module.exports = {
   createLibrarian,
   updateLibrarian,
+  resetUserPassword,
 };
