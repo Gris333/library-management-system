@@ -269,12 +269,24 @@ async function updateUserRole(operatorId, targetUserId, role) {
 }
 
 function generateRandomPassword(length = 8) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let password = "";
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  const normalizedLength = Math.max(8, Math.min(32, Number(length) || 8));
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
+  const allChars = letters + numbers;
+
+  const randomChar = (source) => source.charAt(Math.floor(Math.random() * source.length));
+
+  const chars = [randomChar(letters), randomChar(numbers)];
+  for (let i = chars.length; i < normalizedLength; i++) {
+    chars.push(randomChar(allChars));
   }
-  return password;
+
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+
+  return chars.join("");
 }
 
 function validatePassword(password) {
