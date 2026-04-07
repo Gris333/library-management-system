@@ -2,6 +2,7 @@ const prisma = require("../db/prisma");
 const { formatDateTime } = require("../utils/date"); 
 const { AppError } = require("../lib/errors");
 const bcrypt = require("bcrypt"); // 记得确认项目 package.json 里有没有 bcrypt，没有需 npm install bcrypt
+const ALLOWED_ROLES = ["STUDENT", "LIBRARIAN", "ADMIN"];
 
 function parsePagination(query) {
   const page = Number(query.page || 1);
@@ -24,6 +25,26 @@ const toLibrarianDTO = (user) => {
     role: user.role,
     createdAt: formatDateTime(user.createdAt), 
   };
+};
+
+const toUserSummaryDTO = (user) => {
+  const dto = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    createdAt: formatDateTime(user.createdAt),
+  };
+
+  if (user.role === "STUDENT") {
+    dto.studentId = user.studentId;
+  }
+
+  if (user.role === "LIBRARIAN") {
+    dto.staffId = user.studentId;
+  }
+
+  return dto;
 };
 
 async function createLibrarian(operatorId, payload) {
@@ -178,6 +199,75 @@ async function deleteLibrarian(operatorId, librarianId) {
   return null;
 }
 
+async function listUsers(query) {
+  const { page, size } = parsePagination(query || {});
+  const keyword = typeof query?.keyword === "string" ? query.keyword.trim() : "";
+  const role = typeof query?.role === "string" ? query.role.trim() : "";
+
+  if (role && !ALLOWED_ROLES.includes(role)) {
+    throw new AppError(400, "参数错误");
+  }
+
+  const where = {
+    ...(role ? { role } : {}),
+    ...(keyword
+      ? {
+          OR: [
+            { name: { contains: keyword } },
+            { email: { contains: keyword } },
+            { studentId: { contains: keyword } },
+          ],
+        }
+      : {}),
+  };
+
+  const [total, users] = await prisma.$transaction([
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where,
+      skip: (page - 1) * size,
+      take: size,
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  return {
+    total,
+    page,
+    size,
+    list: users.map(toUserSummaryDTO),
+  };
+}
+
+async function updateUserRole(operatorId, targetUserId, role) {
+  if (!operatorId || !targetUserId || !role) {
+    throw new AppError(400, "参数错误");
+  }
+
+  if (!ALLOWED_ROLES.includes(role)) {
+    throw new AppError(400, "参数错误");
+  }
+
+  if (operatorId === targetUserId) {
+    throw new AppError(400, "禁止修改自己的角色");
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: targetUserId },
+  });
+
+  if (!targetUser) {
+    throw new AppError(404, "用户不存在");
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: targetUserId },
+    data: { role },
+  });
+
+  return toUserSummaryDTO(updatedUser);
+}
+
 function generateRandomPassword(length = 8) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let password = "";
@@ -251,5 +341,7 @@ module.exports = {
   getLibrarianDetail,
   updateLibrarian,
   deleteLibrarian,
+  listUsers,
+  updateUserRole,
   resetUserPassword,
 };

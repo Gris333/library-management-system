@@ -70,11 +70,35 @@ async function deleteLibrarian(req, res, next) {
   }
 }
 
+async function listUsers(req, res, next) {
+  try {
+    const data = await adminUserService.listUsers(req.query || {});
+    sendSuccess(res, data);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateUserRole(req, res, next) {
+  try {
+    const operatorId = req.currentUser ? req.currentUser.id : null;
+    const targetUserId = req.params.id;
+    const { role } = req.body || {};
+
+    const data = await adminUserService.updateUserRole(operatorId, targetUserId, role);
+    sendSuccess(res, data);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   createLibrarian,
   listLibrarians,
   getLibrarianDetail,
   updateLibrarian,
   deleteLibrarian,
+  listUsers,
+  updateUserRole,
   resetUserPassword,
 };
