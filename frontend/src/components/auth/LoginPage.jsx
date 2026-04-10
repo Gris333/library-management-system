@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 const API_BASE = '/api'
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function LoginPage({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true)
@@ -17,6 +18,12 @@ function LoginPage({ onLoginSuccess }) {
 
     if (!loginForm.userName || !loginForm.password) {
       setError('Please enter email and password')
+      setLoading(false)
+      return
+    }
+
+    if (!EMAIL_PATTERN.test(loginForm.userName)) {
+      setError('Please enter a valid email address')
       setLoading(false)
       return
     }
@@ -53,6 +60,12 @@ function LoginPage({ onLoginSuccess }) {
 
     if (!form.name || !form.email || !form.password) {
       setError('Name, email and password are required')
+      setLoading(false)
+      return
+    }
+
+    if (!EMAIL_PATTERN.test(form.email)) {
+      setError('Please enter a valid email address')
       setLoading(false)
       return
     }
@@ -115,9 +128,10 @@ function LoginPage({ onLoginSuccess }) {
 
         {isLogin ? (
           // Login Form
-          <form onSubmit={handleLogin} className="login-form">
+          <form onSubmit={handleLogin} className="login-form" noValidate>
             <input
-              type="email"
+              type="text"
+              inputMode="email"
               placeholder="Email"
               value={loginForm.userName}
               onChange={(e) => setLoginForm({ ...loginForm, userName: e.target.value })}
@@ -138,7 +152,7 @@ function LoginPage({ onLoginSuccess }) {
           </form>
         ) : (
           // Register Form
-          <form onSubmit={handleRegister} className="login-form">
+          <form onSubmit={handleRegister} className="login-form" noValidate>
             <input
               type="text"
               placeholder="Name *"
@@ -148,7 +162,8 @@ function LoginPage({ onLoginSuccess }) {
               required
             />
             <input
-              type="email"
+              type="text"
+              inputMode="email"
               placeholder="Email *"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -162,7 +177,6 @@ function LoginPage({ onLoginSuccess }) {
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               className="login-input"
               required
-              minLength={6}
             />
             <input
               type="text"

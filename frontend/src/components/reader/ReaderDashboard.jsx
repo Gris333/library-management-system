@@ -36,10 +36,10 @@ const ReaderDashboard = ({ user, stats, books, loans, currentPage, setCurrentPag
           total: data.data?.total || 0
         })
       } else {
-        showMessage('error', data.message || '获取图书列表失败')
+        showMessage('error', data.message || 'Failed to fetch book list')
       }
     } catch (err) {
-      showMessage('error', '网络错误: ' + err.message)
+      showMessage('error', 'Network error: ' + err.message)
     }
     setAllBooksLoading(false)
   }
@@ -164,6 +164,11 @@ const ReaderDashboard = ({ user, stats, books, loans, currentPage, setCurrentPag
   // Update profile (1.8)
   const handleUpdateProfile = async (e) => {
     e.preventDefault()
+    if (!editForm.name.trim()) {
+      showMessage('error', 'Name is required')
+      return
+    }
+
     setProfileLoading(true)
     const token = localStorage.getItem('token')
     try {
@@ -528,7 +533,7 @@ const ReaderDashboard = ({ user, stats, books, loans, currentPage, setCurrentPag
             </div>
 
             {editMode ? (
-              <form onSubmit={handleUpdateProfile} className="profile-form">
+              <form onSubmit={handleUpdateProfile} className="profile-form" noValidate>
                 <div className="form-group">
                   <label>Name</label>
                   <input
@@ -597,7 +602,7 @@ const ReaderDashboard = ({ user, stats, books, loans, currentPage, setCurrentPag
     case 'profile':
       return renderProfile()
     default:
-      return <div className="content"><div className="page-header"><h2>功能开发中...</h2></div></div>
+      return <div className="content"><div className="page-header"><h2>Feature under development...</h2></div></div>
   }
 }
 
